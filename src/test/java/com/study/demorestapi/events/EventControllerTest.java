@@ -1,10 +1,12 @@
 package com.study.demorestapi.events;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.hateoas.MediaTypes;
 import org.springframework.http.HttpHeaders;
@@ -14,14 +16,13 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
 
-import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.when;
 import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @ExtendWith(SpringExtension.class)
-@WebMvcTest
+@SpringBootTest
+@AutoConfigureMockMvc
 public class EventControllerTest {
     @Autowired
     MockMvc mockMvc;
@@ -29,12 +30,10 @@ public class EventControllerTest {
     @Autowired
     ObjectMapper mapper;
 
-    @MockBean
-    EventRepository eventRepository;
-
     @Test
     void createEvent() throws Exception {
         Event event = Event.builder()
+                .id(200)
                 .name("Spring")
                 .description("spring")
                 .beginEnrollmentDateTime(LocalDateTime.now())
@@ -43,10 +42,10 @@ public class EventControllerTest {
                 .basePrice(100)
                 .maxPrice(200)
                 .limitOfEnrollment(100)
+                .free(true)
+                .offline(true)
+                .eventStatus(EventStatus.BEGAN_ENROLLMEND)
                 .build();
-        event.setId(10);
-
-        given(eventRepository.save(event)).willReturn(event);
 
         mockMvc.perform(post("/api/events")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -54,8 +53,11 @@ public class EventControllerTest {
                 .content(mapper.writeValueAsString(event)))
             .andDo(print())
             .andExpect(jsonPath("id").exists())
-            .andExpect(header().exists(HttpHeaders.CONTENT_TYPE))
+            .andExpect(header().exists(HttpHeaders.LOCATION))
             .andExpect(header().string(HttpHeaders.CONTENT_TYPE, MediaTypes.HAL_JSON_VALUE))
-            .andExpect(status().isCreated());
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("id").value(Matchers.not(200)))
+            .andExpect(jsonPath("free").value(Matchers.not(true)))
+            .andExpect(jsonPath("offline").value(Matchers.not(true)));
     }
 }
