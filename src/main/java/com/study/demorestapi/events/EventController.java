@@ -1,5 +1,6 @@
 package com.study.demorestapi.events;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.hateoas.MediaTypes;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -11,14 +12,18 @@ import java.net.URI;
 
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 
+@RequiredArgsConstructor
 @RequestMapping(value = "/api/events", produces = MediaTypes.HAL_JSON_VALUE)
 @Controller
 public class EventController {
 
+    private final EventRepository eventRepository;
+
     @PostMapping
     public ResponseEntity createEvent(@RequestBody Event event) {
+        final Event newEvent = eventRepository.save(event);
+
         final URI uri = linkTo(EventController.class).slash("{id}").toUri();
-        event.setId(10);
-        return ResponseEntity.created(uri).body(event);
+        return ResponseEntity.created(uri).body(newEvent);
     }
 }
