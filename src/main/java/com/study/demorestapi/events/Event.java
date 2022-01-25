@@ -1,10 +1,13 @@
 package com.study.demorestapi.events;
 
-import lombok.Builder;
-import lombok.EqualsAndHashCode;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
+@NoArgsConstructor
+@AllArgsConstructor
+@Getter
+@Setter
 @EqualsAndHashCode(of = "id")
 @Builder
 public class Event {
