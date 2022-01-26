@@ -114,7 +114,7 @@ public class EventControllerTest {
                 .beginEventDateTime(LocalDateTime.now())
                 .endEventDateTime(LocalDateTime.now().plusDays(1))
                 .location("korea")
-                .basePrice(100)
+                .basePrice(300)
                 .maxPrice(200)
                 .limitOfEnrollment(100)
                 .build();
@@ -124,6 +124,9 @@ public class EventControllerTest {
                 .accept(MediaTypes.HAL_JSON)
                 .content(mapper.writeValueAsString(event)))
                 .andDo(print())
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$[0].objectName").exists())
+                .andExpect(jsonPath("$[0].code").exists())
+                .andExpect(jsonPath("$[0].defaultMessage").exists());
     }
 }
