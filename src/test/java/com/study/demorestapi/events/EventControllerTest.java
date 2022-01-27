@@ -174,7 +174,7 @@ public class EventControllerTest {
                 .name("Spring")
                 .description("spring")
                 .beginEnrollmentDateTime(LocalDateTime.now())
-                .closeEnrollmentDateTime(LocalDateTime.now().minusDays(1))
+                .closeEnrollmentDateTime(LocalDateTime.now().plusDays(1))
                 .beginEventDateTime(LocalDateTime.now())
                 .endEventDateTime(LocalDateTime.now().plusDays(1))
                 .location("korea")
@@ -187,10 +187,11 @@ public class EventControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .accept(MediaTypes.HAL_JSON)
                 .content(mapper.writeValueAsString(event)))
-                .andDo(print())
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$[0].objectName").exists())
-                .andExpect(jsonPath("$[0].code").exists())
-                .andExpect(jsonPath("$[0].defaultMessage").exists());
+            .andDo(print())
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("errors[0].objectName").exists())
+            .andExpect(jsonPath("errors[0].code").exists())
+            .andExpect(jsonPath("errors[0].defaultMessage").exists())
+            .andExpect(jsonPath("_links.index").exists());
     }
 }
