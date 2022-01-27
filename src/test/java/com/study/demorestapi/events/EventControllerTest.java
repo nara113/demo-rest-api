@@ -57,9 +57,9 @@ public class EventControllerTest {
             .andExpect(jsonPath("id").exists())
             .andExpect(header().exists(HttpHeaders.LOCATION))
             .andExpect(header().string(HttpHeaders.CONTENT_TYPE, MediaTypes.HAL_JSON_VALUE))
-            .andExpect(jsonPath("id").value(Matchers.not(200)))
-            .andExpect(jsonPath("free").value(Matchers.not(true)))
-            .andExpect(jsonPath("offline").value(Matchers.not(true)));
+            .andExpect(jsonPath("free").value(false))
+            .andExpect(jsonPath("offline").value(Matchers.not(false)))
+            .andExpect(jsonPath("eventStatus").value(EventStatus.DRAFT.name()));
     }
 
     @DisplayName("존재하지 않는 입력값 예외발생")
