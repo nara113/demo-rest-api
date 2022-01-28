@@ -22,11 +22,13 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
+import java.util.stream.IntStream;
 
 import static org.springframework.restdocs.headers.HeaderDocumentation.*;
 import static org.springframework.restdocs.hypermedia.HypermediaDocumentation.linkWithRel;
 import static org.springframework.restdocs.hypermedia.HypermediaDocumentation.links;
 import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document;
+import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.get;
 import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.post;
 import static org.springframework.restdocs.payload.PayloadDocumentation.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
@@ -44,6 +46,9 @@ public class EventControllerTest {
 
     @Autowired
     ObjectMapper mapper;
+
+    @Autowired
+    EventRepository eventRepository;
 
     @TestDescription("테스트 성공")
     @Test
@@ -124,6 +129,32 @@ public class EventControllerTest {
                                 fieldWithPath("_links.profile.href").description("link to profile")
                         )
                 ));
+    }
+
+    @DisplayName("이벤트 30개중 2페이지 가져옴")
+    @Test
+    void queryEvents() throws Exception {
+        IntStream.range(1, 30).forEach(this::generateEvent);
+
+        mockMvc.perform(get("/api/events")
+                        .param("page", "1")
+                        .param("size", "10")
+                        .param("sort", "name,DESC"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("_embedded.eventList[0]._links.self").exists())
+                .andExpect(jsonPath("_links.self.href").exists())
+                .andExpect(jsonPath("_links.profile.href").exists())
+                .andExpect(jsonPath("page.size").exists());
+    }
+
+    private void generateEvent(int i) {
+        Event event = Event.builder()
+                .id(i)
+                .name("event " + i)
+                .build();
+
+        eventRepository.save(event);
     }
 
     @DisplayName("존재하지 않는 입력값 예외발생")
