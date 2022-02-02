@@ -11,9 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.restdocs.AutoConfigureRestDocs;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.Profile;
 import org.springframework.hateoas.MediaTypes;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -148,13 +146,34 @@ public class EventControllerTest {
                 .andExpect(jsonPath("page.size").exists());
     }
 
-    private void generateEvent(int i) {
+    @DisplayName("이벤트 조회")
+    @Test
+    void getEvent() throws Exception {
+        final Event event = generateEvent(100);
+
+        mockMvc.perform(get("/api/events/{id}", event.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("name").exists())
+                .andExpect(jsonPath("description").exists())
+                .andExpect(jsonPath("_links.self").exists())
+                .andExpect(jsonPath("_links.profile").exists())
+                .andDo(document("get-event"));
+    }
+
+    @DisplayName("없는 이벤트 조회했을 때 404 응답받기")
+    @Test
+    void getEvent404() throws Exception {
+        mockMvc.perform(get("/api/events/99999"))
+                .andExpect(status().isNotFound());
+    }
+
+    private Event generateEvent(int i) {
         Event event = Event.builder()
-                .id(i)
                 .name("event " + i)
+                .description("test " + i)
                 .build();
 
-        eventRepository.save(event);
+        return eventRepository.save(event);
     }
 
     @DisplayName("존재하지 않는 입력값 예외발생")
