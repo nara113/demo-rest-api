@@ -1,5 +1,6 @@
 package com.study.demorestapi.events;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.study.demorestapi.common.RestDocsConfiguration;
 import com.study.demorestapi.common.TestDescription;
@@ -7,6 +8,7 @@ import org.hamcrest.Matchers;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.restdocs.AutoConfigureRestDocs;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -29,6 +31,7 @@ import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.docu
 import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.get;
 import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.post;
 import static org.springframework.restdocs.payload.PayloadDocumentation.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -47,6 +50,9 @@ public class EventControllerTest {
 
     @Autowired
     EventRepository eventRepository;
+
+    @Autowired
+    ModelMapper modelMapper;
 
     @TestDescription("테스트 성공")
     @Test
@@ -167,10 +173,78 @@ public class EventControllerTest {
                 .andExpect(status().isNotFound());
     }
 
+    @DisplayName("이벤트 수정 성공")
+    @Test
+    void updateEvent() throws Exception {
+        final Event event = generateEvent(200);
+        final EventDto eventDto = modelMapper.map(event, EventDto.class);
+        String newName = "updated event";
+        eventDto.setName(newName);
+
+        mockMvc.perform(put("/api/events/{id}", event.getId())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(mapper.writeValueAsString(eventDto)))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("name").value(newName))
+                .andExpect(jsonPath("_links.self").exists())
+                .andExpect(jsonPath("_links.profile").exists())
+                .andDo(document("update-event"));
+    }
+
+    @DisplayName("이벤트 비어있음 수정 실패")
+    @Test
+    void updateEvent400_empty() throws Exception {
+        final Event event = generateEvent(200);
+        final EventDto eventDto = new EventDto();
+
+        mockMvc.perform(put("/api/events/{id}", event.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(mapper.writeValueAsString(eventDto)))
+                .andDo(print())
+                .andExpect(status().isBadRequest());
+    }
+
+    @DisplayName("이벤트 입력값 오류 수정 실패")
+    @Test
+    void updateEvent400_wrong() throws Exception {
+        final Event event = generateEvent(200);
+        final EventDto eventDto = modelMapper.map(event, EventDto.class);
+        eventDto.setBasePrice(20000);
+        eventDto.setMaxPrice(1000);
+
+        mockMvc.perform(put("/api/events/{id}", event.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(mapper.writeValueAsString(eventDto)))
+                .andDo(print())
+                .andExpect(status().isBadRequest());
+    }
+
+    @DisplayName("존재하지 않는 이벤트 수정 실패")
+    @Test
+    void updateEvent404() throws Exception {
+        final Event event = generateEvent(200);
+        final EventDto eventDto = modelMapper.map(event, EventDto.class);
+
+        mockMvc.perform(put("/api/events/99999")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(mapper.writeValueAsString(eventDto)))
+                .andDo(print())
+                .andExpect(status().isNotFound());
+    }
+
     private Event generateEvent(int i) {
         Event event = Event.builder()
                 .name("event " + i)
                 .description("test " + i)
+                .beginEnrollmentDateTime(LocalDateTime.now())
+                .closeEnrollmentDateTime(LocalDateTime.now().plusDays(1))
+                .beginEventDateTime(LocalDateTime.now())
+                .endEventDateTime(LocalDateTime.now().plusDays(1))
+                .location("korea")
+                .basePrice(100)
+                .maxPrice(200)
+                .limitOfEnrollment(100)
                 .build();
 
         return eventRepository.save(event);
