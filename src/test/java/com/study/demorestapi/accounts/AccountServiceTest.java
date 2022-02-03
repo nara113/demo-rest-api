@@ -1,18 +1,18 @@
 package com.study.demorestapi.accounts;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
 
-@ExtendWith(SpringExtension.class)
 @SpringBootTest
 @ActiveProfiles("test")
 class AccountServiceTest {
@@ -42,5 +42,24 @@ class AccountServiceTest {
 
         // Then
         assertThat(userDetails.getPassword()).isEqualTo(password);
+    }
+
+    @Test
+    void findByUsernameFail_1() {
+        final UsernameNotFoundException exception = Assertions.assertThrows(UsernameNotFoundException.class, () -> {
+            accountService.loadUserByUsername("abc");
+        });
+
+        assertThat(exception.getMessage()).contains("abc");
+    }
+
+    @Test
+    void findByUsernameFail_2() {
+        try {
+            accountService.loadUserByUsername("abc");
+            fail("fail");
+        } catch (UsernameNotFoundException e) {
+            assertThat(e.getMessage()).contains("abc");
+        }
     }
 }

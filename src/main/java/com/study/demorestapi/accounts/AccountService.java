@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 @Service
 public class AccountService implements UserDetailsService {
     @Autowired
-    AccountRepository accountRepository;
+    private AccountRepository accountRepository;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
