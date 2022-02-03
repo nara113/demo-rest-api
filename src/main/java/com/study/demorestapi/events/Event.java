@@ -1,5 +1,6 @@
 package com.study.demorestapi.events;
 
+import com.study.demorestapi.accounts.Account;
 import lombok.*;
 
 import javax.persistence.*;
@@ -32,19 +33,14 @@ public class Event {
     @Enumerated(EnumType.STRING)
     private EventStatus eventStatus = EventStatus.DRAFT;
 
+    @ManyToOne
+    private Account manager;
+
     public void update() {
-        if (basePrice == 0 && maxPrice == 0) {
-            free = true;
-        } else {
-            free = false;
-        }
+        free = basePrice == 0 && maxPrice == 0;
 
         // isBlank java 11에 추
-        if (location == null || location.isBlank()) {
-            offline = false;
-        } else {
-            offline = true;
-        }
+        offline = location != null && !location.isBlank();
     }
 }
 
