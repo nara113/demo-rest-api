@@ -20,6 +20,7 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.IntStream;
 
@@ -162,6 +163,7 @@ public class EventControllerTest extends BaseControllerTest {
     @DisplayName("이벤트 30개중 2페이지 가져옴")
     @Test
     void queryEvents() throws Exception {
+        getAuthToken();
         IntStream.range(1, 30).forEach(this::generateEvent);
 
         mockMvc.perform(get("/api/events")
@@ -173,12 +175,36 @@ public class EventControllerTest extends BaseControllerTest {
                 .andExpect(jsonPath("_embedded.eventList[0]._links.self").exists())
                 .andExpect(jsonPath("_links.self.href").exists())
                 .andExpect(jsonPath("_links.profile.href").exists())
-                .andExpect(jsonPath("page.size").exists());
+                .andExpect(jsonPath("_links.create-event.href").doesNotExist())
+                .andExpect(jsonPath("page.size").exists())
+                .andDo(document("get-events"));
+    }
+
+    @DisplayName("이벤트 30개중 2페이지 가져옴 (인증)")
+    @Test
+    void queryEventsWithAuth() throws Exception {
+        final String authToken = getAuthToken();
+        IntStream.range(1, 30).forEach(this::generateEvent);
+
+        mockMvc.perform(get("/api/events")
+                .header(HttpHeaders.AUTHORIZATION, "bearer " + authToken)
+                .param("page", "1")
+                .param("size", "10")
+                .param("sort", "name,DESC"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("_embedded.eventList[0]._links.self").exists())
+                .andExpect(jsonPath("_links.self.href").exists())
+                .andExpect(jsonPath("_links.profile.href").exists())
+                .andExpect(jsonPath("_links.create-event.href").exists())
+                .andExpect(jsonPath("page.size").exists())
+                .andDo(document("get-events"));
     }
 
     @DisplayName("이벤트 조회")
     @Test
     void getEvent() throws Exception {
+        getAuthToken();
         final Event event = generateEvent(100);
 
         mockMvc.perform(get("/api/events/{id}", event.getId()))
@@ -187,6 +213,25 @@ public class EventControllerTest extends BaseControllerTest {
                 .andExpect(jsonPath("description").exists())
                 .andExpect(jsonPath("_links.self").exists())
                 .andExpect(jsonPath("_links.profile").exists())
+                .andExpect(jsonPath("_links.update-event").doesNotExist())
+                .andDo(document("get-event"));
+    }
+
+    @DisplayName("이벤트 조회 (인증)")
+    @Test
+    void getEventWithAuth() throws Exception {
+        final String authToken = getAuthToken();
+
+        final Event event = generateEvent(100);
+
+        mockMvc.perform(get("/api/events/{id}", event.getId())
+                    .header(HttpHeaders.AUTHORIZATION, "bearer " + authToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("name").exists())
+                .andExpect(jsonPath("description").exists())
+                .andExpect(jsonPath("_links.self").exists())
+                .andExpect(jsonPath("_links.profile").exists())
+                .andExpect(jsonPath("_links.update-event").exists())
                 .andDo(document("get-event"));
     }
 
@@ -199,14 +244,15 @@ public class EventControllerTest extends BaseControllerTest {
 
     @DisplayName("이벤트 수정 성공")
     @Test
-    void updateEvent() throws Exception {
+    void updateEventWithAuth() throws Exception {
+        final String authToken = getAuthToken();
         final Event event = generateEvent(200);
         final EventDto eventDto = modelMapper.map(event, EventDto.class);
         String newName = "updated event";
         eventDto.setName(newName);
 
         mockMvc.perform(put("/api/events/{id}", event.getId())
-                    .header(HttpHeaders.AUTHORIZATION, "bearer " + getAuthToken())
+                    .header(HttpHeaders.AUTHORIZATION, "bearer " + authToken)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(mapper.writeValueAsString(eventDto)))
                 .andDo(print())
@@ -217,14 +263,31 @@ public class EventControllerTest extends BaseControllerTest {
                 .andDo(document("update-event"));
     }
 
+    @DisplayName("이벤트 수정 실패 (인증 실패)")
+    @Test
+    void updateEvent() throws Exception {
+        getAuthToken();
+        final Event event = generateEvent(200);
+        final EventDto eventDto = modelMapper.map(event, EventDto.class);
+        String newName = "updated event";
+        eventDto.setName(newName);
+
+        mockMvc.perform(put("/api/events/{id}", event.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(mapper.writeValueAsString(eventDto)))
+                .andDo(print())
+                .andExpect(status().isUnauthorized());
+    }
+
     @DisplayName("이벤트 비어있음 수정 실패")
     @Test
     void updateEvent400_empty() throws Exception {
+        final String authToken = getAuthToken();
         final Event event = generateEvent(200);
         final EventDto eventDto = new EventDto();
 
         mockMvc.perform(put("/api/events/{id}", event.getId())
-                .header(HttpHeaders.AUTHORIZATION, "bearer " + getAuthToken())
+                .header(HttpHeaders.AUTHORIZATION, "bearer " + authToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(mapper.writeValueAsString(eventDto)))
                 .andDo(print())
@@ -234,13 +297,14 @@ public class EventControllerTest extends BaseControllerTest {
     @DisplayName("이벤트 입력값 오류 수정 실패")
     @Test
     void updateEvent400_wrong() throws Exception {
+        final String authToken = getAuthToken();
         final Event event = generateEvent(200);
         final EventDto eventDto = modelMapper.map(event, EventDto.class);
         eventDto.setBasePrice(20000);
         eventDto.setMaxPrice(1000);
 
         mockMvc.perform(put("/api/events/{id}", event.getId())
-                .header(HttpHeaders.AUTHORIZATION, "bearer " + getAuthToken())
+                .header(HttpHeaders.AUTHORIZATION, "bearer " + authToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(mapper.writeValueAsString(eventDto)))
                 .andDo(print())
@@ -250,11 +314,12 @@ public class EventControllerTest extends BaseControllerTest {
     @DisplayName("존재하지 않는 이벤트 수정 실패")
     @Test
     void updateEvent404() throws Exception {
+        final String authToken = getAuthToken();
         final Event event = generateEvent(200);
         final EventDto eventDto = modelMapper.map(event, EventDto.class);
 
         mockMvc.perform(put("/api/events/99999")
-                .header(HttpHeaders.AUTHORIZATION, "bearer " + getAuthToken())
+                .header(HttpHeaders.AUTHORIZATION, "bearer " + authToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(mapper.writeValueAsString(eventDto)))
                 .andDo(print())
@@ -262,6 +327,8 @@ public class EventControllerTest extends BaseControllerTest {
     }
 
     private Event generateEvent(int i) {
+        final Optional<Account> account = accountRepository.findByEmail(properties.getUserUsername());
+
         Event event = Event.builder()
                 .name("event " + i)
                 .description("test " + i)
@@ -273,6 +340,7 @@ public class EventControllerTest extends BaseControllerTest {
                 .basePrice(100)
                 .maxPrice(200)
                 .limitOfEnrollment(100)
+                .manager(Account.builder().id(account.get().getId()).build())
                 .build();
 
         return eventRepository.save(event);
