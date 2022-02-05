@@ -3,6 +3,7 @@ package com.study.demorestapi.configs;
 import com.study.demorestapi.accounts.Account;
 import com.study.demorestapi.accounts.AccountRole;
 import com.study.demorestapi.accounts.AccountService;
+import com.study.demorestapi.common.AppProperties;
 import org.modelmapper.ModelMapper;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
@@ -25,15 +26,23 @@ public class AppConfig {
     }
 
     @Bean
-    public ApplicationRunner applicationRunner(AccountService accountService) {
+    public ApplicationRunner applicationRunner(AccountService accountService, AppProperties properties) {
         return args -> {
-            Account account = Account.builder()
-                    .email("a@a.com")
-                    .password("1234")
+            Account admin = Account.builder()
+                    .email(properties.getAdminUsername())
+                    .password(properties.getAdminPassword())
                     .roles(Set.of(AccountRole.ADMIN, AccountRole.USER))
                     .build();
 
-            accountService.saveAccount(account);
+            accountService.saveAccount(admin);
+
+            Account user = Account.builder()
+                    .email(properties.getUserUsername())
+                    .password(properties.getUserPassword())
+                    .roles(Set.of(AccountRole.USER))
+                    .build();
+
+            accountService.saveAccount(user);
         };
     }
 }
